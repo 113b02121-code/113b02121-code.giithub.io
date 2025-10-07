@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>蔬果店經營遊戲</title>
+    <style>
+        body {
+            font-family: "Arial", sans-serif;
+            background-color: #f1f1f1;
+            padding: 0;
+            margin: 0;
+        }
+
+        header {
+            background-color: #4CAF50;
+            padding: 20px;
+            color: white;
+            text-align: center;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1000px;
+            margin: 20px auto;
+        }
+
+        .product-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+        }
+
+        .product {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px;
+            width: 220px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .product img {
+            width: 100%;
+            border-radius: 8px;
+        }
+
+        input[type=number] {
+            width: 50px;
+            padding: 5px;
+        }
+
+        button {
+            padding: 8px 12px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            margin-top: 10px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        button:hover {
+            background-color: #388E3C;
+        }
+
+        #status {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        #history {
+            background-color: white;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 10px;
+        }
+
+        table {
+            width: 100%;
+            margin-top: 10px;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 8px;
+            border-bottom: 1px solid #ccc;
+            text-align: center;
+        }
+
+        .day-label {
+            font-weight: bold;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>蔬果店經營遊戲</h1>
+    <p>每天補貨、賣東西、賺錢吧！</p>
+</header>
+
+<div class="container">
+    <div id="status">
+        <h2>第 <span id="day">1</span> 天</h2>
+        <p>今日總收入：NT$<span id="todayIncome">0</span></p>
+        <button onclick="nextDay()">➡️ 下一天（補貨）</button>
+    </div>
+
+    <div class="product-grid" id="products"></div>
+
+    <div id="checkout" style="text-align:center; margin-top: 20px;">
+        <button onclick="checkout()">🛒 結帳</button>
+    </div>
+
+    <div id="history">
+        <h2>📊 銷售歷史</h2>
+        <table id="salesTable">
+            <thead>
+                <tr>
+                    <th>天數</th>
+                    <th>總收入 (NT$)</th>
+                    <th>銷售明細</th>
+                </tr>
+            </thead>
+            <tbody id="salesHistory">
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    const products = [
+        { id: "apple", name: "蘋果", price: 30, stock: 20, image: "https://via.placeholder.com/200x200.png?text=Apple" },
+        { id: "banana", name: "香蕉", price: 15, stock: 30, image: "https://via.placeholder.com/200x200.png?text=Banana" },
+        { id: "tomato", name: "番茄", price: 20, stock: 25, image: "https://via.placeholder.com/200x200.png?text=Tomato" },
+        { id: "carrot", name: "胡蘿蔔", price: 10, stock: 40, image: "https://via.placeholder.com/200x200.png?text=Carrot" }
+    ];
+
+    let day = 1;
+    let cart = {};
+    let history = [];
+
+    function renderProducts() {
+        const container = document.getElementById("products");
+        container.innerHTML = "";
+        products.forEach(p => {
+            const html = `
+                <div class="product">
+                    <img src="${p.image}" alt="${p.name}">
+                    <h3>${p.name}</h3>
+                    <p>單價：NT$${p.price}</p>
+                    <p>庫存：<span id="${p.id}-stock">${p.stock}</span></p>
+                    <input type="number" id="${p.id}-qty" min="0" value="0">
+                    <br>
+                    <button onclick="addToCart('${p.id}')">加入購物車</button>
+                </div>
+            `;
+            container.innerHTML += html;
+        });
+    }
+
+    function addToCart(id) {
+        const qty = parseInt(document.getElementById(`${id}-qty`).value);
+        const product = products.find(p => p.id === id);
+        if (qty <= 0 || qty > product.stock) {
+            alert("數量無效或超過庫存！");
+            return;
+        }
+        cart[id] = (cart[id] || 0) + qty;
+        product.stock -= qty;
+        document.getElementById(`${id}-stock`).textContent = product.stock;
+        document.getElementById(`${id}-qty`).value = 0;
+        alert(`${product.name} x${qty} 加入購物車！`);
+    }
+
+    function checkout() {
+        let total = 0;
+        let detail = [];
+        for (const id in cart) {
+            const product = products.find(p => p.id === id);
+            const qty = cart[id];
+            const cost = qty * product.price;
+            total += cost;
+            detail.push(`${product.name} x${qty}`);
+        }
+        if (total === 0) {
+            alert("購物車是空的！");
+            return;
+        }
+
+        document.getElementById("todayIncome").textContent = total;
+        history.push({
+            day: day,
+            income: total,
+            detail: detail.join(", ")
+        });
+        updateSalesHistory();
+
+        cart = {}; // 清空購物車
+        alert(`✅ 結帳成功！收入 NT$${total}`);
+    }
+
+    function nextDay() {
+        day++;
+        document.getElementById("day").textContent = day;
+        document.getElementById("todayIncome").textContent = 0;
+
+        // 隨機補貨
+        products.forEach(p => {
+            const added = Math.floor(Math.random() * 20) + 5;
+            p.stock += added;
+        });
+
+        renderProducts();
+    }
+
+    function updateSalesHistory() {
+        const table = document.getElementById("salesHistory");
+        table.innerHTML = "";
+        history.forEach(entry => {
+            const row = `<tr>
+                <td class="day-label">第 ${entry.day} 天</td>
+                <td>NT$${entry.income}</td>
+                <td>${entry.detail}</td>
+            </tr>`;
+            table.innerHTML += row;
+        });
+    }
+
+    // 初始化
+    renderProducts();
+</script>
+
+</body>
+</html>
